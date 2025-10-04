@@ -37,6 +37,19 @@ logger = logging.getLogger(__name__)
 
 # Bot token is loaded from environment
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+_COOKIES_FILE = None
+_COOKIES_ENV_B64 = os.getenv("YTDLP_COOKIES_B64")
+if _COOKIES_ENV_B64:
+    try:
+        import base64
+        cookies_bytes = base64.b64decode(_COOKIES_ENV_B64)
+        cookies_path = "/tmp/yt_cookies.txt"
+        with open(cookies_path, "wb") as cf:
+            cf.write(cookies_bytes)
+        _COOKIES_FILE = cookies_path
+        logger.info("yt-dlp cookies loaded from YTDLP_COOKIES_B64")
+    except Exception as e:
+        logger.warning(f"Failed to load cookies from YTDLP_COOKIES_B64: {e}")
 async def _retry_async(func, *args, retries=3, base_delay=1.0, jitter=0.5, **kwargs):
     """Generic async retry with exponential backoff and jitter"""
     attempt = 0
@@ -157,7 +170,18 @@ def search_songs(song_name, num_results=3):
         'extract_flat': False,  # We need full info
         'retries': 3,
         'socket_timeout': 20,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9'
+        },
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android']  # helps bypass some web-only checks
+            }
+        },
     }
+    if _COOKIES_FILE:
+        ydl_opts['cookiefile'] = _COOKIES_FILE
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -234,9 +258,18 @@ def download_song_by_url(url):
         'fragment_retries': 3,
         'socket_timeout': 30,
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0',
-        }
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9'
+        },
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android']
+            }
+        },
     }
+    if _COOKIES_FILE:
+        ydl_opts['cookiefile'] = _COOKIES_FILE
+    
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
