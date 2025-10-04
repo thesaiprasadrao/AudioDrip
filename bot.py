@@ -273,10 +273,38 @@ def download_song_by_url(url):
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            logger.info("� Downloading selected song...")
+            logger.info("📥 Downloading selected song...")
             
             # Download the specific URL
-            info = ydl.extract_info(url, download=True)
+            info = None
+            primary_err = None
+            try:
+                info = ydl.extract_info(url, download=True)
+            except Exception as e1:
+                primary_err = e1
+                msg = str(e1).lower()
+                logger.warning(f"Primary download attempt failed: {e1}")
+                # If the requested size-filtered format isn't available, retry with a broader fallback
+                if (
+                    "requested format is not available" in msg
+                    or "no video formats" in msg
+                    or "unable to download" in msg
+                ):
+                    fallback_opts = dict(ydl_opts)
+                    fallback_opts['format'] = 'bestaudio/best'  # drop filesize filter, let postprocessor convert
+                    try:
+                        logger.info("Retrying with fallback format: bestaudio/best …")
+                        with yt_dlp.YoutubeDL(fallback_opts) as ydl_fb:
+                            info = ydl_fb.extract_info(url, download=True)
+                    except Exception as e2:
+                        # Raise the fallback error but include the primary error for context
+                        logger.error(f"Fallback download also failed: {e2}")
+                        raise Exception(
+                            f"Primary failed: {primary_err}; Fallback failed: {e2}"
+                        )
+                else:
+                    # Not a format-availability issue; rethrow
+                    raise
             
             if info:
                 title = info.get('title', 'Unknown')
