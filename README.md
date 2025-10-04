@@ -15,6 +15,7 @@ Interactive YouTube → MP3 bot with search, selection, thumbnails, retries, and
 ## Configuration
 Set the token via environment variable:
 - BOT_TOKEN: Your Telegram bot token
+- FFMPEG_LOCATION (optional): Path to ffmpeg or a directory containing ffmpeg/ffprobe. Useful on platforms where ffmpeg isn't in PATH.
 
 Local development supports a `.env` file:
 ```
@@ -40,6 +41,12 @@ docker build -t tg-bot .
 docker run -e BOT_TOKEN=123456:ABC... --name tg-bot --restart unless-stopped -d tg-bot
 ```
 
+If you provide a custom ffmpeg path in your image or host, set:
+
+```bash
+-e FFMPEG_LOCATION=/usr/local/bin
+```
+
 ### Update
 ```bash
 docker pull <your-registry>/tg-bot:latest
@@ -57,3 +64,8 @@ Make sure outbound internet is allowed, and no inbound ports are needed (the bot
 - Bot uses environment BOT_TOKEN; do not hardcode secrets.
 - If /cut is missing in menu, type it manually or restart chat; commands are set on startup.
 - Cache directory is cleaned periodically.
+
+## Railway/Render notes
+- This repo includes a `Dockerfile` that installs ffmpeg, which is sufficient on Render.
+- For Railway Nixpacks deployment (without Docker), a `nixpacks.toml` is included to add `ffmpeg` automatically.
+- If you still see `ffprobe and ffmpeg not found`, set an env var `FFMPEG_LOCATION` to the directory containing ffmpeg (e.g., `/usr/bin`), or switch to Docker deploy.

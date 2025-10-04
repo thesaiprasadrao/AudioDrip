@@ -37,6 +37,24 @@ logger = logging.getLogger(__name__)
 
 # Bot token is loaded from environment
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+# Optional ffmpeg location (directory or full path to ffmpeg)
+FFMPEG_LOCATION = os.getenv("FFMPEG_LOCATION") or os.getenv("FFMPEG_PATH")
+
+def _resolve_ffmpeg_bin():
+    """Return ffmpeg executable path or name, honoring FFMPEG_LOCATION."""
+    if FFMPEG_LOCATION:
+        if os.path.isdir(FFMPEG_LOCATION):
+            return os.path.join(FFMPEG_LOCATION, 'ffmpeg')
+        return FFMPEG_LOCATION
+    return 'ffmpeg'
+
+def _resolve_ytdlp_ffmpeg_location():
+    """Return a directory for yt-dlp's ffmpeg_location if configured, else None."""
+    if not FFMPEG_LOCATION:
+        return None
+    if os.path.isdir(FFMPEG_LOCATION):
+        return FFMPEG_LOCATION
+    return os.path.dirname(FFMPEG_LOCATION) or '.'
 _COOKIES_FILE = None
 _COOKIES_ENV_B64 = os.getenv("YTDLP_COOKIES_B64")
 if _COOKIES_ENV_B64:
@@ -143,8 +161,9 @@ async def _ffmpeg_cut_audio(input_path: str, start_sec: int, end_sec: int, outpu
     if start_sec < 0 or end_sec <= start_sec:
         raise ValueError("End time must be greater than start time")
     duration = end_sec - start_sec
+    ffmpeg_bin = _resolve_ffmpeg_bin()
     cmd = [
-        'ffmpeg', '-y',
+        ffmpeg_bin, '-y',
         '-ss', str(start_sec),
         '-t', str(duration),
         '-i', input_path,
@@ -155,7 +174,10 @@ async def _ffmpeg_cut_audio(input_path: str, start_sec: int, end_sec: int, outpu
     logger.info(f"Running ffmpeg: {' '.join(cmd)}")
     # Run ffmpeg in a thread to avoid blocking event loop
     def _run():
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except FileNotFoundError:
+            raise RuntimeError("ffmpeg not found. Set FFMPEG_LOCATION to the directory or full path of ffmpeg.")
         if result.returncode != 0:
             raise RuntimeError(result.stderr.decode(errors='ignore')[-5000:])
     await asyncio.to_thread(_run)
@@ -247,6 +269,8 @@ def download_song_by_url(url):
             'preferredcodec': 'mp3',
             'preferredquality': '128',  # Good balance of quality and size
         }],
+        # If FFMPEG_LOCATION is provided, hand it to yt-dlp so it can find ffmpeg/ffprobe
+        **({ 'ffmpeg_location': _resolve_ytdlp_ffmpeg_location() } if '_resolve_ytdlp_ffmpeg_location' in globals() and _resolve_ytdlp_ffmpeg_location() else {}),
         'quiet': True,  # Keep quiet for better UX
         'no_warnings': True,
         'extractaudio': True,

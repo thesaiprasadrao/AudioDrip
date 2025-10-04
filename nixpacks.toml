@@ -1,0 +1,3 @@
+# Ensure ffmpeg is available when deploying on platforms that use Nixpacks (e.g., Railway)
+[phases.setup]
+nixPkgs = ["ffmpeg"]
