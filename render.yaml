@@ -10,8 +10,6 @@ services:
       # Provide these in the Render dashboard after creation
       - key: BOT_TOKEN
         value: ""
-        sync: false
       # Optional: Base64-encoded cookies.txt to bypass some YouTube checks
       - key: YTDLP_COOKIES_B64
         value: ""
-        sync: false
