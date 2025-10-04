@@ -1,0 +1,16 @@
+services:
+  - type: worker
+    name: audiodrip-bot
+    env: docker
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile
+    # Optional: set a region
+    # region: oregon
+    envVars:
+      # Provide this in the Render dashboard as a secret or env var
+      - key: BOT_TOKEN
+        # If you create a secret named 'bot-token' in Render, this will auto-link:
+        fromSecret: bot-token
+      # Optional: Base64-encoded cookies.txt to bypass some YouTube checks
+      - key: YTDLP_COOKIES_B64
+        fromSecret: yt-cookies-b64
