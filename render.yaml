@@ -7,10 +7,11 @@ services:
     # Optional: set a region
     # region: oregon
     envVars:
-      # Provide this in the Render dashboard as a secret or env var
+      # Provide these in the Render dashboard after creation
       - key: BOT_TOKEN
-        # If you create a secret named 'bot-token' in Render, this will auto-link:
-        fromSecret: bot-token
+        value: ""
+        sync: false
       # Optional: Base64-encoded cookies.txt to bypass some YouTube checks
       - key: YTDLP_COOKIES_B64
-        fromSecret: yt-cookies-b64
+        value: ""
+        sync: false
